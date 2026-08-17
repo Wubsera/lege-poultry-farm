@@ -8,26 +8,19 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('users', function (Blueprint $table) {
-            $table->foreignId('farm_id')
-                ->nullable()
-                ->after('id')
-                ->index();
-        });
-
-        Schema::table('users', function (Blueprint $table) {
-            $table->foreign('farm_id')
-                ->references('id')
-                ->on('farms')
-                ->nullOnDelete();
+        Schema::create('users', function (Blueprint $table) {
+            $table->id();
+            $table->string('name');
+            $table->string('email')->nullable();
+            $table->timestamp('email_verified_at')->nullable();
+            $table->string('password')->nullable();
+            $table->rememberToken();
+            $table->timestamps();
         });
     }
 
     public function down(): void
     {
-        Schema::table('users', function (Blueprint $table) {
-            $table->dropForeign(['farm_id']);
-            $table->dropColumn('farm_id');
-        });
+        Schema::dropIfExists('users');
     }
 };
