@@ -342,6 +342,9 @@
 </head>
 
 <body>
+
+@include('layouts.farm-navigation')
+
 <div class="header">
 
     <h1>🐔 Lege Poultry Farm</h1>
@@ -362,11 +365,6 @@
         <!-- DATE FILTER -->
 
         <div class="filter">
-
-            <!-- <h3 class="filter-title">
-                📅 Report Period
-            </h3> -->
-
 
             <div class="range-buttons">
 
@@ -457,10 +455,6 @@
         <!-- QUICK ACTIONS -->
 
         <div class="top-actions">
-
-            <!-- <h3 class="top-actions-title">
-                Quick Actions
-            </h3> -->
 
             <div class="actions">
 

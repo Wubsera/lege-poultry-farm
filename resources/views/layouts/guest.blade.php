@@ -10,6 +10,7 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
     <title>Dorofarm</title>
+    <link rel="icon" type="image/png" href="{{ asset('chicken-logo.png') }}">
 
     <link rel="preconnect" href="https://fonts.bunny.net">
 

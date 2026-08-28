@@ -6,6 +6,7 @@ use App\Models\EggProduction;
 use App\Models\EggSale;
 use App\Models\Expense;
 use Illuminate\Http\Request;
+use App\Support\MoneyFormatter;
 
 class DashboardController extends Controller
 {

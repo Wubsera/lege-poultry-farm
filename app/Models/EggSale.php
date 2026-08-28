@@ -16,6 +16,12 @@ class EggSale extends Model
         'total_amount',
     ];
 
+    protected $casts = [
+        'sale_date' => 'date',
+        'quantity' => 'integer',
+        'unit_price' => 'decimal:2',
+        'total_amount' => 'decimal:2',
+    ];
 
     /*
     |--------------------------------------------------------------------------

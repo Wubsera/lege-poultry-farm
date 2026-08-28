@@ -25,26 +25,26 @@ class RegisteredUserController extends Controller
         return view('auth.register');
     }
 
-
     /**
      * Handle an incoming registration request.
      *
-     * Each registered user belongs to one farm.
+     * The first registered user uses Farm #1.
+     * If Farm #1 does not have FarmSetting yet,
+     * it will be created automatically.
      *
-     * The first user uses the existing Farm #1.
-     * Later users create their own farm.
+     * Later users create their own farm and farm settings.
      *
      * @throws ValidationException
      */
     public function store(Request $request): RedirectResponse
     {
-        $request->validate([
-            /*
-            |--------------------------------------------------------------------------
-            | User Information
-            |--------------------------------------------------------------------------
-            */
+        /*
+        |--------------------------------------------------------------------------
+        | Validate Registration
+        |--------------------------------------------------------------------------
+        */
 
+        $request->validate([
             'name' => [
                 'required',
                 'string',
@@ -58,28 +58,12 @@ class RegisteredUserController extends Controller
                 'unique:users,mobile_number',
             ],
 
-            /*
-            |--------------------------------------------------------------------------
-            | PIN
-            |--------------------------------------------------------------------------
-            |
-            | Numeric only.
-            | No minimum or maximum length.
-            |
-            */
-
             'pin' => [
                 'required',
                 'string',
                 'regex:/^[0-9]+$/',
                 'confirmed',
             ],
-
-            /*
-            |--------------------------------------------------------------------------
-            | Farm Information
-            |--------------------------------------------------------------------------
-            */
 
             'farm_name' => [
                 'required',
@@ -99,10 +83,9 @@ class RegisteredUserController extends Controller
             ],
         ]);
 
-
         /*
         |--------------------------------------------------------------------------
-        | Create User and Farm
+        | Create Farm + Farm Settings + User
         |--------------------------------------------------------------------------
         */
 
@@ -112,24 +95,56 @@ class RegisteredUserController extends Controller
             |--------------------------------------------------------------------------
             | First User
             |--------------------------------------------------------------------------
-            |
-            | The first account uses the existing Farm #1.
-            |
             */
 
             if (User::count() === 0) {
 
-                $farm = Farm::findOrFail(1);
+                /*
+                |--------------------------------------------------------------------------
+                | Get Existing Farm #1
+                |--------------------------------------------------------------------------
+                */
 
-                $farmSetting = FarmSetting::where(
-                    'farm_id',
-                    $farm->id
-                )->firstOrFail();
-
+                $farm = Farm::find(1);
 
                 /*
                 |--------------------------------------------------------------------------
-                | Update Existing Farm
+                | Safety: Create Farm #1 if Missing
+                |--------------------------------------------------------------------------
+                */
+
+                if (!$farm) {
+
+                    $farm = Farm::create([
+                        'farm_name' => $request->farm_name,
+                        'registration_date' => $request->registration_date,
+                    ]);
+                }
+
+                /*
+                |--------------------------------------------------------------------------
+                | Create or Update Farm Settings
+                |--------------------------------------------------------------------------
+                */
+
+                $farmSetting = FarmSetting::firstOrNew([
+                    'farm_id' => $farm->id,
+                ]);
+
+                $farmSetting->registered_birds =
+                    $request->registered_birds;
+
+                $farmSetting->farm_name =
+                    $request->farm_name;
+
+                $farmSetting->registration_date =
+                    $request->registration_date;
+
+                $farmSetting->save();
+
+                /*
+                |--------------------------------------------------------------------------
+                | Update Farm
                 |--------------------------------------------------------------------------
                 */
 
@@ -138,18 +153,11 @@ class RegisteredUserController extends Controller
                     'registration_date' => $request->registration_date,
                 ]);
 
-
-                $farmSetting->update([
-                    'registered_birds' => $request->registered_birds,
-                    'farm_name' => $request->farm_name,
-                    'registration_date' => $request->registration_date,
-                ]);
-
             } else {
 
                 /*
                 |--------------------------------------------------------------------------
-                | Create New Farm
+                | Later Users: Create New Farm
                 |--------------------------------------------------------------------------
                 */
 
@@ -157,7 +165,6 @@ class RegisteredUserController extends Controller
                     'farm_name' => $request->farm_name,
                     'registration_date' => $request->registration_date,
                 ]);
-
 
                 /*
                 |--------------------------------------------------------------------------
@@ -173,7 +180,6 @@ class RegisteredUserController extends Controller
                 ]);
             }
 
-
             /*
             |--------------------------------------------------------------------------
             | Create User
@@ -183,45 +189,19 @@ class RegisteredUserController extends Controller
             return User::create([
                 'name' => $request->name,
                 'mobile_number' => $request->mobile_number,
-
-                /*
-                |--------------------------------------------------------------------------
-                | Keep Email Empty
-                |--------------------------------------------------------------------------
-                |
-                | Farmers do not use email.
-                |
-                */
-
                 'email' => null,
-
-                /*
-                |--------------------------------------------------------------------------
-                | Store PIN Securely
-                |--------------------------------------------------------------------------
-                */
-
                 'password' => Hash::make($request->pin),
-
-                /*
-                |--------------------------------------------------------------------------
-                | Connect User to Farm
-                |--------------------------------------------------------------------------
-                */
-
                 'farm_id' => $farm->id,
             ]);
         });
 
-
         /*
         |--------------------------------------------------------------------------
-        | Fire Registration Event
+        | Registration Event
         |--------------------------------------------------------------------------
         */
 
         event(new Registered($user));
-
 
         /*
         |--------------------------------------------------------------------------
@@ -231,10 +211,9 @@ class RegisteredUserController extends Controller
 
         Auth::login($user);
 
-
         /*
         |--------------------------------------------------------------------------
-        | Dashboard
+        | Redirect to Dashboard
         |--------------------------------------------------------------------------
         */
 
