@@ -22,6 +22,14 @@ Route::get('/test', function () {
         'message' => 'Dorofarm API is working',
     ]);
 });
+Route::get('/auth-debug', function (\Illuminate\Http\Request $request) {
+    return response()->json([
+        'authorization' => $request->header('Authorization'),
+        'bearer_token' => $request->bearerToken(),
+        'auth_check' => auth()->check(),
+        'user_id' => auth()->id(),
+    ]);
+})->middleware('auth:sanctum');
 
 /*
 |--------------------------------------------------------------------------

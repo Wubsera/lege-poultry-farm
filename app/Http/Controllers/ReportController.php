@@ -20,7 +20,6 @@ class ReportController extends Controller
 
         $farmId = auth()->user()->farm_id;
 
-
         /*
         |--------------------------------------------------------------------------
         | Date Range
@@ -68,9 +67,16 @@ class ReportController extends Controller
 
         if ($from && $to) {
 
-            $productionQuery->whereBetween(
+            $productionQuery->whereDate(
                 'production_date',
-                [$from, $to]
+                '>=',
+                $from
+            );
+
+            $productionQuery->whereDate(
+                'production_date',
+                '<=',
+                $to
             );
         }
 
@@ -98,9 +104,16 @@ class ReportController extends Controller
 
         if ($from && $to) {
 
-            $salesQuery->whereBetween(
+            $salesQuery->whereDate(
                 'sale_date',
-                [$from, $to]
+                '>=',
+                $from
+            );
+
+            $salesQuery->whereDate(
+                'sale_date',
+                '<=',
+                $to
             );
         }
 
@@ -131,14 +144,22 @@ class ReportController extends Controller
 
         if ($from && $to) {
 
-            $expensesQuery->whereBetween(
+            $expensesQuery->whereDate(
                 'expense_date',
-                [$from, $to]
+                '>=',
+                $from
+            );
+
+            $expensesQuery->whereDate(
+                'expense_date',
+                '<=',
+                $to
             );
         }
 
         $expenses = $expensesQuery
             ->orderBy('expense_date', 'desc')
+            ->orderBy('id', 'desc')
             ->get();
 
 
@@ -217,9 +238,16 @@ class ReportController extends Controller
 
         if ($from && $to) {
 
-            $flockQuery->whereBetween(
+            $flockQuery->whereDate(
                 'record_date',
-                [$from, $to]
+                '>=',
+                $from
+            );
+
+            $flockQuery->whereDate(
+                'record_date',
+                '<=',
+                $to
             );
         }
 
@@ -294,7 +322,7 @@ class ReportController extends Controller
 
         /*
         |--------------------------------------------------------------------------
-        | View
+        | Response
         |--------------------------------------------------------------------------
         */
 

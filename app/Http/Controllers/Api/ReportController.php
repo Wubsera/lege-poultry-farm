@@ -65,9 +65,13 @@ class ReportController extends Controller
         );
 
         if ($from && $to) {
+
             $productionQuery->whereBetween(
                 'production_date',
-                [$from, $to]
+                [
+                    $from,
+                    $to,
+                ]
             );
         }
 
@@ -85,6 +89,10 @@ class ReportController extends Controller
         |--------------------------------------------------------------------------
         | Egg Sales
         |--------------------------------------------------------------------------
+        |
+        | sale_date is a DATETIME column.
+        | Therefore we must include the complete selected day.
+        |
         */
 
         $salesQuery = EggSale::where(
@@ -93,9 +101,13 @@ class ReportController extends Controller
         );
 
         if ($from && $to) {
+
             $salesQuery->whereBetween(
                 'sale_date',
-                [$from, $to]
+                [
+                    $from . ' 00:00:00',
+                    $to . ' 23:59:59',
+                ]
             );
         }
 
@@ -124,14 +136,19 @@ class ReportController extends Controller
         );
 
         if ($from && $to) {
+
             $expensesQuery->whereBetween(
                 'expense_date',
-                [$from, $to]
+                [
+                    $from,
+                    $to,
+                ]
             );
         }
 
         $expenses = $expensesQuery
             ->orderBy('expense_date', 'desc')
+            ->orderBy('id', 'desc')
             ->get();
 
         /*
@@ -140,15 +157,31 @@ class ReportController extends Controller
         |--------------------------------------------------------------------------
         */
 
-        $totalProduced = $productions->sum('produced');
+        $totalProduced = $productions->sum(
+            'produced'
+        );
 
-        $totalBroken = $productions->sum('broken');
+        $totalBroken = $productions->sum(
+            'broken'
+        );
 
-        $totalSold = $sales->sum('quantity');
+        $totalSold = $sales->sum(
+            'quantity'
+        );
 
-        $totalSales = $sales->sum('total_amount');
+        $totalSales = $sales->sum(
+            'total_amount'
+        );
 
-        $totalExpenses = $expenses->sum('amount');
+        $totalExpenses = $expenses->sum(
+            'amount'
+        );
+
+        /*
+        |--------------------------------------------------------------------------
+        | Profit
+        |--------------------------------------------------------------------------
+        */
 
         $profit = $totalSales - $totalExpenses;
 
@@ -156,6 +189,12 @@ class ReportController extends Controller
         |--------------------------------------------------------------------------
         | Current Egg Inventory
         |--------------------------------------------------------------------------
+        |
+        | Inventory is independent of the selected report period.
+        |
+        | Available Eggs =
+        | Total Produced - Total Broken - Total Sold
+        |
         */
 
         $allProduced = EggProduction::where(
@@ -194,7 +233,7 @@ class ReportController extends Controller
 
         /*
         |--------------------------------------------------------------------------
-        | Flock
+        | Flock Records
         |--------------------------------------------------------------------------
         */
 
@@ -204,9 +243,13 @@ class ReportController extends Controller
         );
 
         if ($from && $to) {
+
             $flockQuery->whereBetween(
                 'record_date',
-                [$from, $to]
+                [
+                    $from,
+                    $to,
+                ]
             );
         }
 
@@ -214,6 +257,12 @@ class ReportController extends Controller
             ->orderBy('record_date', 'asc')
             ->orderBy('id', 'asc')
             ->get();
+
+        /*
+        |--------------------------------------------------------------------------
+        | Latest Sick Bird Count
+        |--------------------------------------------------------------------------
+        */
 
         $latestFlockRecord = $flockRecords
             ->sortByDesc('record_date')
@@ -224,13 +273,34 @@ class ReportController extends Controller
             ? (int) $latestFlockRecord->sick
             : 0;
 
+        /*
+        |--------------------------------------------------------------------------
+        | Recovered Birds
+        |--------------------------------------------------------------------------
+        */
+
         $totalRecovered = (int) $flockRecords->sum(
             'recovered'
         );
 
+        /*
+        |--------------------------------------------------------------------------
+        | Dead Birds
+        |--------------------------------------------------------------------------
+        */
+
         $totalDead = (int) $flockRecords->sum(
             'dead'
         );
+
+        /*
+        |--------------------------------------------------------------------------
+        | Available Birds
+        |--------------------------------------------------------------------------
+        |
+        | Deaths reduce the registered flock.
+        |
+        */
 
         $deathsUntilDate = FlockRecord::where(
             'farm_id',
@@ -284,17 +354,23 @@ class ReportController extends Controller
                 'total_sales' => (float) $totalSales,
 
                 'total_sales_formatted' =>
-                    MoneyFormatter::format($totalSales),
+                    MoneyFormatter::format(
+                        $totalSales
+                    ),
 
                 'total_expenses' => (float) $totalExpenses,
 
                 'total_expenses_formatted' =>
-                    MoneyFormatter::format($totalExpenses),
+                    MoneyFormatter::format(
+                        $totalExpenses
+                    ),
 
                 'profit' => (float) $profit,
 
                 'profit_formatted' =>
-                    MoneyFormatter::format($profit),
+                    MoneyFormatter::format(
+                        $profit
+                    ),
 
                 'available_eggs' => (int) $availableEggs,
             ],
@@ -324,7 +400,35 @@ class ReportController extends Controller
             |--------------------------------------------------------------------------
             */
 
-            'productions' => $productions,
+            'productions' => $productions->map(
+                function ($production) {
+
+                    $produced = (int) $production->produced;
+                    $broken = (int) $production->broken;
+
+                    return [
+
+                        'production_date' =>
+                            $production->production_date,
+
+                        'produced' =>
+                            $produced,
+
+                        'broken' =>
+                            $broken,
+
+                        /*
+                        | Net eggs ready for sale
+                        */
+
+                        'net' =>
+                            max(
+                                0,
+                                $produced - $broken
+                            ),
+                    ];
+                }
+            ),
 
             /*
             |--------------------------------------------------------------------------
@@ -337,15 +441,20 @@ class ReportController extends Controller
 
                     return [
 
-                        'id' => $sale->id,
+                        'id' =>
+                            $sale->id,
 
-                        'sale_date' => $sale->sale_date,
+                        'sale_date' =>
+                            $sale->sale_date,
 
-                        'name' => $sale->name,
+                        'name' =>
+                            $sale->name,
 
-                        'quantity' => (int) $sale->quantity,
+                        'quantity' =>
+                            (int) $sale->quantity,
 
-                        'unit_price' => (float) $sale->unit_price,
+                        'unit_price' =>
+                            (float) $sale->unit_price,
 
                         'unit_price_formatted' =>
                             MoneyFormatter::format(
@@ -374,7 +483,8 @@ class ReportController extends Controller
 
                     return [
 
-                        'id' => $expense->id,
+                        'id' =>
+                            $expense->id,
 
                         'expense_date' =>
                             $expense->expense_date,
