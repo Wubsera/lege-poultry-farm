@@ -1,4 +1,4 @@
-*.log
+\*.log
 .DS_Store
 .env
 .env.backup
@@ -24,4 +24,4 @@ Homestead.yaml
 Thumbs.db
 /database/*.sqlite-journal
 /database/*.sqlite
-rm 'public/database.sqlite'
+/public/database.sqlite
