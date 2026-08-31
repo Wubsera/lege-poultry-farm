@@ -24,3 +24,4 @@ Homestead.yaml
 Thumbs.db
 /database/*.sqlite-journal
 /database/*.sqlite
+rm 'public/database.sqlite'
