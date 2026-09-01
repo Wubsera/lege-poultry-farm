@@ -39,8 +39,28 @@ class AuthenticatedSessionController extends Controller
             ],
         ]);
 
-        $mobileNumber = trim($request->mobile_number);
+        /*
+         * Normalize Ethiopian mobile number.
+         *
+         * Accepted formats:
+         * 09xxxxxxxx
+         * 9xxxxxxxx
+         * 2519xxxxxxxx
+         * +2519xxxxxxxx
+         */
+        $mobileNumber = $this->normalizeMobileNumber(
+            $request->mobile_number
+        );
 
+        if ($mobileNumber === null) {
+            throw ValidationException::withMessages([
+                'mobile_number' => 'Please enter a valid Ethiopian mobile number.',
+            ]);
+        }
+
+        /*
+         * Use the normalized number for rate limiting as well.
+         */
         $throttleKey = Str::transliterate(
             Str::lower($mobileNumber) . '|' . $request->ip()
         );
@@ -60,6 +80,9 @@ class AuthenticatedSessionController extends Controller
             ]);
         }
 
+        /*
+         * Authenticate using the normalized mobile number.
+         */
         if (! Auth::attempt([
             'mobile_number' => $mobileNumber,
             'password' => $request->pin,
@@ -82,6 +105,41 @@ class AuthenticatedSessionController extends Controller
         return redirect()->intended(
             route('dashboard', absolute: false)
         );
+    }
+
+    /**
+     * Normalize Ethiopian mobile number to 09xxxxxxxx format.
+     */
+    private function normalizeMobileNumber(string $mobileNumber): ?string
+    {
+        // Remove spaces, hyphens, parentheses and dots.
+        $mobileNumber = preg_replace(
+            '/[\s\-().]/',
+            '',
+            $mobileNumber
+        );
+
+        // Remove leading +.
+        if (str_starts_with($mobileNumber, '+')) {
+            $mobileNumber = substr($mobileNumber, 1);
+        }
+
+        // 2519xxxxxxxx -> 09xxxxxxxx
+        if (preg_match('/^2519\d{8}$/', $mobileNumber)) {
+            return '0' . substr($mobileNumber, 3);
+        }
+
+        // 9xxxxxxxx -> 09xxxxxxxx
+        if (preg_match('/^9\d{8}$/', $mobileNumber)) {
+            return '0' . $mobileNumber;
+        }
+
+        // 09xxxxxxxx -> 09xxxxxxxx
+        if (preg_match('/^09\d{8}$/', $mobileNumber)) {
+            return $mobileNumber;
+        }
+
+        return null;
     }
 
     /**
