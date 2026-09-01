@@ -12,6 +12,12 @@ class AuthController extends Controller
 {
     /**
      * Login with mobile number and PIN.
+     *
+     * Accepted formats:
+     * 09xxxxxxxx
+     * 9xxxxxxxx
+     * 2519xxxxxxxx
+     * +2519xxxxxxxx
      */
     public function login(Request $request): JsonResponse
     {
@@ -28,9 +34,20 @@ class AuthController extends Controller
             ],
         ]);
 
+        $mobileNumber = $this->normalizeMobileNumber(
+            $credentials['mobile_number']
+        );
+
+        if ($mobileNumber === null) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Please enter a valid Ethiopian mobile number.',
+            ], 422);
+        }
+
         $user = User::where(
             'mobile_number',
-            $credentials['mobile_number']
+            $mobileNumber
         )->first();
 
         if (
@@ -70,6 +87,37 @@ class AuthController extends Controller
                 'registration_date' => $user->farm->registration_date,
             ] : null,
         ]);
+    }
+
+    /**
+     * Normalize Ethiopian mobile numbers to 09xxxxxxxx.
+     */
+    private function normalizeMobileNumber(string $mobileNumber): ?string
+    {
+        // Remove spaces, hyphens, and other formatting characters.
+        $mobileNumber = preg_replace('/[\s\-().]/', '', $mobileNumber);
+
+        // Remove leading + from international format.
+        if (str_starts_with($mobileNumber, '+')) {
+            $mobileNumber = substr($mobileNumber, 1);
+        }
+
+        // 2519xxxxxxxx -> 09xxxxxxxx
+        if (preg_match('/^2519\d{8}$/', $mobileNumber)) {
+            return '0' . substr($mobileNumber, 3);
+        }
+
+        // 9xxxxxxxx -> 09xxxxxxxx
+        if (preg_match('/^9\d{8}$/', $mobileNumber)) {
+            return '0' . $mobileNumber;
+        }
+
+        // 09xxxxxxxx -> 09xxxxxxxx
+        if (preg_match('/^09\d{8}$/', $mobileNumber)) {
+            return $mobileNumber;
+        }
+
+        return null;
     }
 
     /**
@@ -132,11 +180,36 @@ class AuthController extends Controller
             ],
         ]);
 
+        $mobileNumber = $this->normalizeMobileNumber(
+            $validated['mobile_number']
+        );
+
+        if ($mobileNumber === null) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Please enter a valid Ethiopian mobile number.',
+            ], 422);
+        }
+
         $user = $request->user();
+
+        $existingUser = User::where(
+            'mobile_number',
+            $mobileNumber
+        )
+            ->where('id', '!=', $user->id)
+            ->exists();
+
+        if ($existingUser) {
+            return response()->json([
+                'success' => false,
+                'message' => 'This mobile number is already registered.',
+            ], 422);
+        }
 
         $user->update([
             'name' => $validated['name'],
-            'mobile_number' => $validated['mobile_number'],
+            'mobile_number' => $mobileNumber,
         ]);
 
         $user->refresh();
@@ -175,7 +248,6 @@ class AuthController extends Controller
 
         $user = $request->user();
 
-        // Verify the current password.
         if (!Hash::check(
             $validated['current_password'],
             $user->password
@@ -186,7 +258,6 @@ class AuthController extends Controller
             ], 422);
         }
 
-        // Make sure the new password is different.
         if (Hash::check(
             $validated['new_password'],
             $user->password
