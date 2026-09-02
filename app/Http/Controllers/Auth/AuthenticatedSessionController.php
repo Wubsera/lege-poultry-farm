@@ -83,10 +83,11 @@ class AuthenticatedSessionController extends Controller
         /*
          * Authenticate using the normalized mobile number.
          */
-        if (! Auth::attempt([
-            'mobile_number' => $mobileNumber,
-            'password' => $request->pin,
-        ])) {
+       if (! Auth::attempt([
+    'mobile_number' => $mobileNumber,
+    'password' => $request->pin,
+    'is_active' => true,
+])) {
 
             RateLimiter::hit(
                 $throttleKey,

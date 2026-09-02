@@ -50,13 +50,14 @@ class AuthController extends Controller
             $mobileNumber
         )->first();
 
-        if (
-            !$user ||
-            !Hash::check(
-                $credentials['pin'],
-                $user->password
-            )
-        ) {
+       if (
+    !$user ||
+    !$user->is_active ||
+    !Hash::check(
+        $credentials['pin'],
+        $user->password
+    )
+) {
             return response()->json([
                 'success' => false,
                 'message' => 'The mobile number or PIN is incorrect.',

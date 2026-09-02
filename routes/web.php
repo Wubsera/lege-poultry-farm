@@ -10,6 +10,7 @@ use App\Http\Controllers\ReportController;
 use App\Http\Controllers\FlockRecordController;
 use App\Http\Controllers\FarmSettingController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\FarmUserController;
 
 
 /*
@@ -52,6 +53,12 @@ Route::middleware('auth')->group(function () {
 
     Route::post('/flock-records', [FlockRecordController::class, 'store']);
 
+    /*
+    |--------------------------------------------------------------------------
+    | Farm Settings
+    |--------------------------------------------------------------------------
+    */
+
     Route::get('/farm-settings', [FarmSettingController::class, 'edit']);
 
     Route::put('/farm-settings', [FarmSettingController::class, 'update']);
@@ -71,6 +78,44 @@ Route::middleware('auth')->group(function () {
 
     Route::delete('/profile', [ProfileController::class, 'destroy'])
         ->name('profile.destroy');
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Farm Users
+    |--------------------------------------------------------------------------
+    */
+
+    Route::get('/farm-settings/users', [
+        FarmUserController::class,
+        'index',
+    ])->name('farm-settings.users.index');
+
+    Route::get('/farm-settings/users/create', [
+        FarmUserController::class,
+        'create',
+    ])->name('farm-settings.users.create');
+
+    Route::post('/farm-settings/users', [
+        FarmUserController::class,
+        'store',
+    ])->name('farm-settings.users.store');
+
+    Route::get('/farm-settings/users/{id}/edit', [
+        FarmUserController::class,
+        'edit',
+    ])->name('farm-settings.users.edit');
+
+    Route::put('/farm-settings/users/{id}', [
+        FarmUserController::class,
+        'update',
+    ])->name('farm-settings.users.update');
+
+    Route::put('/farm-settings/users/{id}/toggle-status', [
+        FarmUserController::class,
+        'toggleStatus',
+    ])->name('farm-settings.users.toggle-status');
+
 });
 
 

@@ -5,9 +5,14 @@
 
     <meta charset="UTF-8">
 
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
 
-    <title>{{ auth()->user()->farm->farm_name ?? 'Farm Settings' }}</title>
+    <title>
+        {{ auth()->user()->farm->farm_name ?? 'Farm Settings' }}
+    </title>
 
     <style>
 
@@ -72,6 +77,18 @@
             font-size: 15px;
         }
 
+        /*
+        |--------------------------------------------------------------------------
+        | Read-only fields for Staff
+        |--------------------------------------------------------------------------
+        */
+
+        input[readonly] {
+            background: #f3f4f6;
+            color: #6b7280;
+            cursor: not-allowed;
+        }
+
         button {
             padding: 12px 20px;
             background: #2563eb;
@@ -102,6 +119,14 @@
             margin-bottom: 20px;
         }
 
+        .info {
+            background: #eff6ff;
+            color: #1e40af;
+            padding: 12px;
+            border-radius: 7px;
+            margin-bottom: 20px;
+        }
+
         .back {
             display: inline-block;
             margin-top: 20px;
@@ -109,13 +134,30 @@
             color: #2563eb;
         }
 
+        .users-link {
+            display: inline-block;
+            margin-top: 20px;
+            margin-left: 10px;
+            padding: 10px 15px;
+            background: #111827;
+            color: white;
+            text-decoration: none;
+            border-radius: 7px;
+            font-weight: bold;
+        }
+
+        .users-link:hover {
+            background: #374151;
+        }
+
     </style>
 
 </head>
 
-
 <body>
+
 @include('layouts.farm-navigation')
+
 
 <div class="header">
 
@@ -139,6 +181,8 @@
         </h2>
 
 
+        {{-- Success Message --}}
+
         @if (session('success'))
 
             <div class="success">
@@ -147,6 +191,8 @@
 
         @endif
 
+
+        {{-- Validation Errors --}}
 
         @if ($errors->any())
 
@@ -165,6 +211,18 @@
         @endif
 
 
+        {{-- Staff Information --}}
+
+        @if (!auth()->user()->is_admin)
+
+            <div class="info">
+                You are viewing your farm information.
+                Only the Farm Administrator can update these settings.
+            </div>
+
+        @endif
+
+
         <form
             method="POST"
             action="/farm-settings"
@@ -175,7 +233,7 @@
             @method('PUT')
 
 
-            <!-- Farm Name -->
+            {{-- Farm Name --}}
 
             <div class="field">
 
@@ -188,16 +246,19 @@
                     name="farm_name"
                     value="{{ old(
                         'farm_name',
-                        auth()->user()->farm->farm_name ?? ''
+                        $farm->farm_name ?? ''
                     ) }}"
                     placeholder="Enter farm name"
                     required
+                    @if (!auth()->user()->is_admin)
+                        readonly
+                    @endif
                 >
 
             </div>
 
 
-            <!-- Registered Birds -->
+            {{-- Registered Birds --}}
 
             <div class="field">
 
@@ -210,16 +271,19 @@
                     name="registered_birds"
                     value="{{ old(
                         'registered_birds',
-                        auth()->user()->farm?->setting?->registered_birds ?? ''
+                        $settings?->registered_birds ?? ''
                     ) }}"
                     min="1"
                     required
+                    @if (!auth()->user()->is_admin)
+                        readonly
+                    @endif
                 >
 
             </div>
 
 
-            <!-- Registration Date -->
+            {{-- Registration Date --}}
 
             <div class="field">
 
@@ -232,21 +296,45 @@
                     name="registration_date"
                     value="{{ old(
                         'registration_date',
-                        isset(auth()->user()->farm->registration_date)
-                            ? auth()->user()->farm->registration_date->format('Y-m-d')
+                        $farm->registration_date
+                            ? $farm->registration_date->format('Y-m-d')
                             : today()->format('Y-m-d')
                     ) }}"
                     required
+                    @if (!auth()->user()->is_admin)
+                        readonly
+                    @endif
                 >
 
             </div>
 
 
-            <button type="submit">
-                💾 Save Farm Information
-            </button>
+            {{-- Save Button --}}
+
+            @if (auth()->user()->is_admin)
+
+                <button type="submit">
+                    💾 Save Farm Information
+                </button>
+
+            @endif
+
 
         </form>
+
+
+        {{-- Admin: Manage Users --}}
+
+        @if (auth()->user()->is_admin)
+
+            <a
+                href="{{ route('farm-settings.users.index') }}"
+                class="users-link"
+            >
+                👥 Manage Users
+            </a>
+
+        @endif
 
 
         <a
@@ -255,6 +343,7 @@
         >
             ← Back to Reports
         </a>
+
 
     </div>
 

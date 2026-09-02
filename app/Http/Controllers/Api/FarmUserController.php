@@ -10,9 +10,6 @@ use Illuminate\Support\Facades\Hash;
 
 class FarmUserController extends Controller
 {
-    /**
-     * List users belonging to the authenticated user's farm.
-     */
     public function index(Request $request): JsonResponse
     {
         $admin = $request->user();
@@ -32,6 +29,7 @@ class FarmUserController extends Controller
                 'mobile_number',
                 'farm_id',
                 'is_admin',
+                'is_active',
                 'created_at',
             ])
             ->orderBy('is_admin', 'desc')
@@ -44,9 +42,6 @@ class FarmUserController extends Controller
         ]);
     }
 
-    /**
-     * Create a new user under the authenticated admin's farm.
-     */
     public function store(Request $request): JsonResponse
     {
         $admin = $request->user();
@@ -59,24 +54,9 @@ class FarmUserController extends Controller
         }
 
         $validated = $request->validate([
-            'name' => [
-                'required',
-                'string',
-                'max:255',
-            ],
-
-            'mobile_number' => [
-                'required',
-                'string',
-                'max:20',
-            ],
-
-            'email' => [
-                'nullable',
-                'email',
-                'max:255',
-            ],
-
+            'name' => ['required', 'string', 'max:255'],
+            'mobile_number' => ['required', 'string', 'max:20'],
+            'email' => ['nullable', 'email', 'max:255'],
             'pin' => [
                 'required',
                 'string',
@@ -119,8 +99,11 @@ class FarmUserController extends Controller
             // Always use the authenticated admin's farm.
             'farm_id' => $admin->farm_id,
 
-            // New users are not administrators.
+            // Users created here are never administrators.
             'is_admin' => false,
+
+            // New staff users are active by default.
+            'is_active' => true,
         ]);
 
         return response()->json([
@@ -133,17 +116,13 @@ class FarmUserController extends Controller
                 'mobile_number' => $user->mobile_number,
                 'farm_id' => $user->farm_id,
                 'is_admin' => $user->is_admin,
+                'is_active' => $user->is_active,
             ],
         ], 201);
     }
 
-    /**
-     * Update a user belonging to the authenticated admin's farm.
-     */
-    public function update(
-        Request $request,
-        int $id
-    ): JsonResponse {
+    public function update(Request $request, int $id): JsonResponse
+    {
         $admin = $request->user();
 
         if (!$admin->is_admin) {
@@ -153,12 +132,7 @@ class FarmUserController extends Controller
             ], 403);
         }
 
-        /*
-        |--------------------------------------------------------------------------
-        | Find User Only Inside Admin's Farm
-        |--------------------------------------------------------------------------
-        */
-
+        // Important: only users belonging to the admin's farm.
         $user = User::where('id', $id)
             ->where('farm_id', $admin->farm_id)
             ->first();
@@ -170,12 +144,7 @@ class FarmUserController extends Controller
             ], 404);
         }
 
-        /*
-        |--------------------------------------------------------------------------
-        | Do Not Allow Editing the Farm Admin
-        |--------------------------------------------------------------------------
-        */
-
+        // Admin account cannot be modified here.
         if ($user->is_admin) {
             return response()->json([
                 'success' => false,
@@ -184,24 +153,9 @@ class FarmUserController extends Controller
         }
 
         $validated = $request->validate([
-            'name' => [
-                'required',
-                'string',
-                'max:255',
-            ],
-
-            'mobile_number' => [
-                'required',
-                'string',
-                'max:20',
-            ],
-
-            'email' => [
-                'nullable',
-                'email',
-                'max:255',
-            ],
-
+            'name' => ['required', 'string', 'max:255'],
+            'mobile_number' => ['required', 'string', 'max:20'],
+            'email' => ['nullable', 'email', 'max:255'],
             'pin' => [
                 'nullable',
                 'string',
@@ -243,16 +197,12 @@ class FarmUserController extends Controller
             'email' => $validated['email'] ?? null,
         ];
 
-        // Only change PIN when a new PIN was supplied.
         if (!empty($validated['pin'])) {
-            $updateData['password'] = Hash::make(
-                $validated['pin']
-            );
+            $updateData['password'] = Hash::make($validated['pin']);
         }
 
-        // Never update farm_id or is_admin here.
+        // Never update farm_id, is_admin, or is_active here.
         $user->update($updateData);
-
         $user->refresh();
 
         return response()->json([
@@ -265,6 +215,72 @@ class FarmUserController extends Controller
                 'mobile_number' => $user->mobile_number,
                 'farm_id' => $user->farm_id,
                 'is_admin' => $user->is_admin,
+                'is_active' => $user->is_active,
+            ],
+        ]);
+    }
+
+    /**
+     * Activate or deactivate a staff user.
+     */
+    public function toggleStatus(
+        Request $request,
+        int $id
+    ): JsonResponse {
+        $admin = $request->user();
+
+        if (!$admin->is_admin) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Only the farm administrator can manage users.',
+            ], 403);
+        }
+
+        // Important: only users belonging to the admin's farm.
+        $user = User::where('id', $id)
+            ->where('farm_id', $admin->farm_id)
+            ->first();
+
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'User not found in your farm.',
+            ], 404);
+        }
+
+        // The farm administrator can never be deactivated.
+        if ($user->is_admin) {
+            return response()->json([
+                'success' => false,
+                'message' => 'The farm administrator account cannot be deactivated.',
+            ], 403);
+        }
+
+      $user->update([
+    'is_active' => !$user->is_active,
+]);
+
+// Immediately revoke all existing API sessions when deactivated.
+if (!$user->is_active) {
+    $user->tokens()->delete();
+}
+
+$user->refresh();
+
+        $user->refresh();
+
+        return response()->json([
+            'success' => true,
+            'message' => $user->is_active
+                ? 'User activated successfully.'
+                : 'User deactivated successfully.',
+            'data' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'mobile_number' => $user->mobile_number,
+                'farm_id' => $user->farm_id,
+                'is_admin' => $user->is_admin,
+                'is_active' => $user->is_active,
             ],
         ]);
     }
@@ -285,17 +301,17 @@ class FarmUserController extends Controller
             $mobileNumber = substr($mobileNumber, 1);
         }
 
-        // 2519xxxxxxxx
+        // 2519xxxxxxxx -> 09xxxxxxxx
         if (preg_match('/^2519\d{8}$/', $mobileNumber)) {
             return '0' . substr($mobileNumber, 3);
         }
 
-        // 9xxxxxxxx
+        // 9xxxxxxxx -> 09xxxxxxxx
         if (preg_match('/^9\d{8}$/', $mobileNumber)) {
             return '0' . $mobileNumber;
         }
 
-        // 09xxxxxxxx
+        // 09xxxxxxxx -> 09xxxxxxxx
         if (preg_match('/^09\d{8}$/', $mobileNumber)) {
             return $mobileNumber;
         }

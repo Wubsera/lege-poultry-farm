@@ -57,6 +57,14 @@ class FarmSettingController extends Controller
      */
     public function update(Request $request): JsonResponse
     {
+        $user = $request->user();
+
+if (!$user->is_admin) {
+    return response()->json([
+        'success' => false,
+        'message' => 'Only the farm administrator can update farm settings.',
+    ], 403);
+}
         $validated = $request->validate([
             'farm_name' => [
                 'required',
@@ -76,8 +84,7 @@ class FarmSettingController extends Controller
             ],
         ]);
 
-        $farm = $request->user()->farm;
-
+      $farm = $user->farm;
         if (!$farm) {
             return response()->json([
                 'success' => false,

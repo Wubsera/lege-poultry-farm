@@ -7,9 +7,9 @@ use App\Http\Controllers\Api\EggSaleController;
 use App\Http\Controllers\Api\ExpenseController;
 use App\Http\Controllers\Api\FarmSettingController;
 use App\Http\Controllers\Api\FlockRecordController;
-use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\ReportController;
 use App\Http\Controllers\Api\FarmUserController;
+use Illuminate\Support\Facades\Route;
 
 /*
 |--------------------------------------------------------------------------
@@ -23,6 +23,7 @@ Route::get('/test', function () {
         'message' => 'Dorofarm API is working',
     ]);
 });
+
 Route::get('/auth-debug', function (\Illuminate\Http\Request $request) {
     return response()->json([
         'authorization' => $request->header('Authorization'),
@@ -65,6 +66,16 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user', [
         AuthController::class,
         'user',
+    ]);
+
+    Route::put('/user/profile', [
+        AuthController::class,
+        'updateProfile',
+    ]);
+
+    Route::put('/user/password', [
+        AuthController::class,
+        'changePassword',
     ]);
 
     /*
@@ -141,26 +152,32 @@ Route::middleware('auth:sanctum')->group(function () {
         FlockRecordController::class,
         'store',
     ]);
+
     /*
-|--------------------------------------------------------------------------
-| Farm Users
-|--------------------------------------------------------------------------
-*/
+    |--------------------------------------------------------------------------
+    | Farm Users
+    |--------------------------------------------------------------------------
+    */
 
-Route::get('/farm/users', [
-    FarmUserController::class,
-    'index',
-]);
+    Route::get('/farm/users', [
+        FarmUserController::class,
+        'index',
+    ]);
 
-Route::post('/farm/users', [
-    FarmUserController::class,
-    'store',
-]);
+    Route::post('/farm/users', [
+        FarmUserController::class,
+        'store',
+    ]);
 
-Route::put('/farm/users/{id}', [
-    FarmUserController::class,
-    'update',
-]);
+    Route::put('/farm/users/{id}', [
+        FarmUserController::class,
+        'update',
+    ]);
+
+    Route::put('/farm/users/{id}/toggle-status', [
+        FarmUserController::class,
+        'toggleStatus',
+    ]);
 
     /*
     |--------------------------------------------------------------------------
@@ -177,17 +194,15 @@ Route::put('/farm/users/{id}', [
         FarmSettingController::class,
         'update',
     ]);
-    Route::middleware('auth:sanctum')->get(
-    '/reports',
-    [ReportController::class, 'index']
-);
-Route::put('/user/profile', [
-    AuthController::class,
-    'updateProfile',
-]);
-Route::put('/user/password', [
-    AuthController::class,
-    'changePassword',
-]);
-});
 
+    /*
+    |--------------------------------------------------------------------------
+    | Reports
+    |--------------------------------------------------------------------------
+    */
+
+    Route::get('/reports', [
+        ReportController::class,
+        'index',
+    ]);
+});
