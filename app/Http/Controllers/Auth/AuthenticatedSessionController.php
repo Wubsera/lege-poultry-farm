@@ -3,9 +3,11 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -66,7 +68,6 @@ class AuthenticatedSessionController extends Controller
         );
 
         if (RateLimiter::tooManyAttempts($throttleKey, 5)) {
-
             $seconds = RateLimiter::availableIn($throttleKey);
 
             throw ValidationException::withMessages([
@@ -81,14 +82,27 @@ class AuthenticatedSessionController extends Controller
         }
 
         /*
-         * Authenticate using the normalized mobile number.
+         * Find the user by normalized mobile number.
+         *
+         * We intentionally do not include is_active here.
+         * This allows us to distinguish an inactive account
+         * from incorrect login credentials.
          */
-       if (! Auth::attempt([
-    'mobile_number' => $mobileNumber,
-    'password' => $request->pin,
-    'is_active' => true,
-])) {
+        $user = User::where(
+            'mobile_number',
+            $mobileNumber
+        )->first();
 
+        /*
+         * User does not exist or PIN is incorrect.
+         */
+        if (
+            !$user ||
+            !Hash::check(
+                $request->pin,
+                $user->password
+            )
+        ) {
             RateLimiter::hit(
                 $throttleKey,
                 60
@@ -98,6 +112,20 @@ class AuthenticatedSessionController extends Controller
                 'mobile_number' => __('The mobile number or PIN is incorrect.'),
             ]);
         }
+
+        /*
+         * Credentials are correct, but the account is inactive.
+         */
+        if (!$user->is_active) {
+            throw ValidationException::withMessages([
+                'mobile_number' => __('Account is inactive.'),
+            ]);
+        }
+
+        /*
+         * Credentials are valid and the account is active.
+         */
+        Auth::login($user);
 
         RateLimiter::clear($throttleKey);
 
