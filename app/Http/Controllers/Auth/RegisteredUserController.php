@@ -93,11 +93,19 @@ class RegisteredUserController extends Controller
 
             /*
             |--------------------------------------------------------------------------
+            | Determine First User
+            |--------------------------------------------------------------------------
+            */
+
+            $isFirstUser = User::count() === 0;
+
+            /*
+            |--------------------------------------------------------------------------
             | First User
             |--------------------------------------------------------------------------
             */
 
-            if (User::count() === 0) {
+            if ($isFirstUser) {
 
                 /*
                 |--------------------------------------------------------------------------
@@ -192,6 +200,7 @@ class RegisteredUserController extends Controller
                 'email' => null,
                 'password' => Hash::make($request->pin),
                 'farm_id' => $farm->id,
+                'is_admin' => $isFirstUser,
             ]);
         });
 

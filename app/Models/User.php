@@ -12,26 +12,28 @@ class User extends Authenticatable
 {
     use HasApiTokens, HasFactory, Notifiable;
 
-    protected $fillable = [
-        'name',
-        'email',
-        'mobile_number',
-        'password',
-        'farm_id',
-    ];
+ protected $fillable = [
+    'name',
+    'email',
+    'mobile_number',
+    'password',
+    'farm_id',
+    'is_admin',
+];
 
     protected $hidden = [
         'password',
         'remember_token',
     ];
 
-    protected function casts(): array
-    {
-        return [
-            'email_verified_at' => 'datetime',
-            'password' => 'hashed',
-        ];
-    }
+ protected function casts(): array
+{
+    return [
+        'email_verified_at' => 'datetime',
+        'password' => 'hashed',
+        'is_admin' => 'boolean',
+    ];
+}
 
     public function farm(): BelongsTo
     {

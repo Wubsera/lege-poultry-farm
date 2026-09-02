@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\FarmSettingController;
 use App\Http\Controllers\Api\FlockRecordController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\ReportController;
+use App\Http\Controllers\Api\FarmUserController;
 
 /*
 |--------------------------------------------------------------------------
@@ -140,6 +141,26 @@ Route::middleware('auth:sanctum')->group(function () {
         FlockRecordController::class,
         'store',
     ]);
+    /*
+|--------------------------------------------------------------------------
+| Farm Users
+|--------------------------------------------------------------------------
+*/
+
+Route::get('/farm/users', [
+    FarmUserController::class,
+    'index',
+]);
+
+Route::post('/farm/users', [
+    FarmUserController::class,
+    'store',
+]);
+
+Route::put('/farm/users/{id}', [
+    FarmUserController::class,
+    'update',
+]);
 
     /*
     |--------------------------------------------------------------------------
