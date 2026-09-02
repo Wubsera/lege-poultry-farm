@@ -34,6 +34,9 @@ class RegisteredUserController extends Controller
      *
      * Later users create their own farm and farm settings.
      *
+     * Every user registering through this form is the
+     * administrator/owner of the farm they create or use.
+     *
      * @throws ValidationException
      */
     public function store(Request $request): RedirectResponse
@@ -190,7 +193,7 @@ class RegisteredUserController extends Controller
 
             /*
             |--------------------------------------------------------------------------
-            | Create User
+            | Create Farm Owner / Administrator
             |--------------------------------------------------------------------------
             */
 
@@ -200,7 +203,10 @@ class RegisteredUserController extends Controller
                 'email' => null,
                 'password' => Hash::make($request->pin),
                 'farm_id' => $farm->id,
-                'is_admin' => $isFirstUser,
+
+                // Every user registering a farm is its administrator.
+                'is_admin' => true,
+                'is_active' => true,
             ]);
         });
 
