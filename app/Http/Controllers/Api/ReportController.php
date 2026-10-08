@@ -445,7 +445,7 @@ class ReportController extends Controller
                             $sale->id,
 
                         'sale_date' =>
-                            $sale->sale_date,
+                            $sale->sale_date?->format('Y-m-d'),
 
                         'name' =>
                             $sale->name,
