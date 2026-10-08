@@ -35,11 +35,23 @@ class EggSaleController extends Controller
                 'updated_at',
             ]);
 
-        return response()->json([
-            'success' => true,
-            'data' => $sales,
-        ]);
-    }
+     return response()->json([
+    'success' => true,
+    'data' => $sales->map(function ($sale) {
+        return [
+            'id' => $sale->id,
+            'farm_id' => $sale->farm_id,
+            'sale_date' => $sale->sale_date?->format('Y-m-d'),
+            'name' => $sale->name,
+            'quantity' => $sale->quantity,
+            'unit_price' => $sale->unit_price,
+            'total_amount' => $sale->total_amount,
+            'created_at' => $sale->created_at,
+            'updated_at' => $sale->updated_at,
+        ];
+    }),
+]);
+}
 
     /**
      * Create an egg sale for the authenticated farm.
